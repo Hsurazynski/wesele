@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Nasze Wesele</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f5f5f5;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
+
+.card{
+background:white;
+padding:30px;
+border-radius:20px;
+box-shadow:0 0 20px rgba(0,0,0,.1);
+text-align:center;
+width:90%;
+max-width:500px;
+}
+
+button{
+padding:15px 30px;
+font-size:20px;
+cursor:pointer;
+border:none;
+border-radius:10px;
+}
+
+#status{
+margin-top:20px;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="card">
+
+<h1>💍 Nasze Wesele</h1>
+
+<h2>Aleksandra ❤️ Hubert</h2>
+
+<input
+type="file"
+id="file"
+accept="image/*"
+multiple
+/>
+
+<br><br>
+
+<button onclick="upload()">
+📸 Dodaj zdjęcia
+</button>
+
+<div id="status"></div>
+
+</div>
+
+<script>
+
+const CLOUD_NAME="dxrsjpxpq";
+const PRESET="wesele_upload";
+
+async function upload(){
+
+let files=document.getElementById("file").files;
+
+if(files.length===0){
+alert("Wybierz zdjęcia");
+return;
+}
+
+for(let file of files){
+
+let form=new FormData();
+
+form.append("file",file);
+form.append("upload_preset",PRESET);
+
+await fetch(
+`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+{
+method:"POST",
+body:form
+});
+
+}
+
+document.getElementById("status").innerHTML=
+"✅ Zdjęcia zostały przesłane";
+
+}
+
+</script>
+
+</body>
+</html>
