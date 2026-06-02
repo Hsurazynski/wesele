@@ -1,109 +1,214 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wesele 2026 • Wspólne zdjęcia</title>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;500&display=swap');
 
-<title>Nasze Wesele</title>
+    :root {
+      --gold: #d4af37;
+      --soft: #f8f1e9;
+    }
 
-<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #f5e8e0, #f8f1e9);
+      color: #333;
+      line-height: 1.6;
+    }
 
-body{
-font-family:Arial;
-background:#f5f5f5;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-margin:0;
-}
+    header {
+      background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://picsum.photos/id/1015/2000/1200') center/cover;
+      color: white;
+      text-align: center;
+      padding: 100px 20px 80px;
+    }
 
-.card{
-background:white;
-padding:30px;
-border-radius:20px;
-box-shadow:0 0 20px rgba(0,0,0,.1);
-text-align:center;
-width:90%;
-max-width:500px;
-}
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.2rem;
+      margin-bottom: 10px;
+    }
 
-button{
-padding:15px 30px;
-font-size:20px;
-cursor:pointer;
-border:none;
-border-radius:10px;
-}
+    .subtitle {
+      font-size: 1.3rem;
+      opacity: 0.95;
+    }
 
-#status{
-margin-top:20px;
-}
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
 
-</style>
+    .upload-area {
+      background: white;
+      border-radius: 20px;
+      padding: 50px 30px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      margin: 30px 0;
+    }
 
+    .upload-btn {
+      background: var(--gold);
+      color: black;
+      border: none;
+      padding: 18px 50px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .upload-btn:hover {
+      transform: scale(1.05);
+      background: #e5b92a;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .photo-card {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      transition: transform 0.3s;
+    }
+
+    .photo-card:hover {
+      transform: scale(1.04);
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #777;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: #777;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Nasze Wesele</h1>
+    <p class="subtitle">2026 • Wspólna galeria zdjęć</p>
+  </header>
 
-<div class="card">
+  <div class="container">
+    <div class="upload-area">
+      <h2>Dodaj swoje zdjęcia z wesela ❤️</h2>
+      <p>Możesz dodać wiele zdjęć naraz</p>
+      <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+      <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+        📸 Dodaj zdjęcia
+      </button>
+      <p id="status" style="margin-top: 15px; font-weight: 500;"></p>
+    </div>
 
-<h1>💍 Nasze Wesele</h1>
+    <h2 style="text-align:center; margin:40px 0 20px;">Galeria weselna</h2>
+    <div id="gallery" class="gallery"></div>
+  </div>
 
-<h2>Aleksandra ❤️ Hubert</h2>
+  <footer>
+    Zdjęcia lądują w folderze <strong>wesele-2026</strong><br>
+    Miłego przeglądania!
+  </footer>
 
-<input
-type="file"
-id="file"
-accept="image/*"
-multiple
-/>
+  <script>
+    // ==================== KONFIGURACJA FIREBASE ====================
+    const firebaseConfig = {
+      apiKey: "TWOJ_API_KEY",
+      authDomain: "twoj-projekt.firebaseapp.com",
+      projectId: "twoj-projekt",
+      storageBucket: "twoj-projekt.appspot.com",
+      messagingSenderId: "xxxxxxxxxx",
+      appId: "1:xxxxxxxxxx:web:xxxxxxxxxxxxxxxx"
+    };
 
-<br><br>
+    // Inicjalizacja Firebase
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const storageRef = storage.ref('wesele-2026');
 
-<button onclick="upload()">
-📸 Dodaj zdjęcia
-</button>
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+    const gallery = document.getElementById('gallery');
 
-<div id="status"></div>
+    // Obsługa dodawania zdjęć
+    fileInput.addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (files.length === 0) return;
 
-</div>
+      status.textContent = `Przesyłanie ${files.length} zdjęć...`;
+      status.style.color = '#d4af37';
 
-<script>
+      for (let file of files) {
+        try {
+          const fileRef = storageRef.child(file.name);
+          await fileRef.put(file);
+          console.log(`Przesłano: ${file.name}`);
+        } catch (error) {
+          console.error("Błąd przy przesyłaniu:", error);
+        }
+      }
 
-const CLOUD_NAME="dxrsjpxpq";
-const PRESET="wesele_upload";
+      status.textContent = `✅ Pomyślnie dodano ${files.length} zdjęć!`;
+      setTimeout(() => status.textContent = '', 5000);
+      loadGallery();
+    });
 
-async function upload(){
+    // Ładowanie galerii
+    async function loadGallery() {
+      gallery.innerHTML = '<div class="loading">Ładowanie zdjęć...</div>';
+      
+      try {
+        const result = await storageRef.listAll();
+        gallery.innerHTML = '';
 
-let files=document.getElementById("file").files;
+        for (let item of result.items) {
+          const url = await item.getDownloadURL();
+          
+          const div = document.createElement('div');
+          div.className = 'photo-card';
+          div.innerHTML = `
+            <img src="${url}" alt="${item.name}">
+          `;
+          gallery.appendChild(div);
+        }
 
-if(files.length===0){
-alert("Wybierz zdjęcia");
-return;
-}
+        if (result.items.length === 0) {
+          gallery.innerHTML = '<p style="text-align:center; grid-column:1/-1; padding:40px;">Galeria jest jeszcze pusta. Dodaj pierwsze zdjęcia!</p>';
+        }
+      } catch (error) {
+        console.error(error);
+        gallery.innerHTML = '<p style="color:red; text-align:center;">Błąd ładowania galerii.</p>';
+      }
+    }
 
-for(let file of files){
-
-let form=new FormData();
-
-form.append("file",file);
-form.append("upload_preset",PRESET);
-
-await fetch(
-`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-{
-method:"POST",
-body:form
-});
-
-}
-
-document.getElementById("status").innerHTML=
-"✅ Zdjęcia zostały przesłane";
-
-}
-
-</script>
-
+    // Załaduj galerię przy starcie
+    window.onload = loadGallery;
+  </script>
 </body>
 </html>
